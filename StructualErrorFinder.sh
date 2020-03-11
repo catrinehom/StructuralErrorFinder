@@ -3,7 +3,7 @@
 # Program: StructuralErrorFinder
 # Description: StructuralErrorFinder is a pipeline to find structural errors in your assembly based on your reads.
 # Version: 1.0
-# Author: Catrine Ahrens Høm
+# Author: Catrine Høm
 
 # Usage:
     ## StructuralErrorFinder [-f <fastq reads>] [-a <fasta assembly] [-o <output name]
@@ -25,9 +25,11 @@ usage() { echo "Usage: $0 [-f <fastq reads>] [-a <fasta assembly] [-o <output na
 # Default values
 stepsize=5
 threads=8
+min_alignment_length=5000
+level=1
 
 # Parse flags
-while getopts ":f:a:o:" opt; do
+while getopts ":f:a:o:m:l:" opt; do
     case "${opt}" in
         f)
             fastqreads=${OPTARG}
@@ -37,6 +39,12 @@ while getopts ":f:a:o:" opt; do
             ;;
         o)
             outputname=${OPTARG}
+            ;;
+        m)
+            min_alignment_length=${OPTARG}
+            ;;
+        l)
+            level=${OPTARG}
             ;;
         h)
             usage
@@ -71,7 +79,7 @@ echo "StructuralErrorFinder is a pipeline to find structural errors in your asse
 echo "" | tee -a $log
 
 # Check format and that the files exists
-python3 ErrorHandling.py -f $fastqreads -a $assembly -o $outputname -s $stepsize
+python3 ErrorHandling.py -f $fastqreads -a $assembly -o $outputname -s $stepsize -m $min_alignment_length -l $level
 
 # Check if python script exited with an error
 if [ $? -eq 0 ]
@@ -115,7 +123,7 @@ db=./databases/assembly_db
 blast_result="blast_results.out"
 
 makeblastdb -in $assembly -dbtype nucl -out $db
-blastn -db $db -query $fastareads -out $res -outfmt 6
+blastn -db $db -query $fastareads -out $blast_result -outfmt 6
 
 echo "Time stamp: $SECONDS seconds." | tee -a $log
 echo "" | tee -a $log
@@ -125,7 +133,7 @@ echo "" | tee -a $log
 ###########################################################################
 
 echo "Starting STEP 3: Find positions" | tee -a $log
-python3 PositionFinder.py -i $blast_result -a $assembly -o $outputname
+python3 PositionFinder.py -i $blast_result -a $assembly -o $outputname -m $min_alignment_length -l $level
 
 # Check if python script exited with an error
 if [ $? -eq 0 ]
